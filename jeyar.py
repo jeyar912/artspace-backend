@@ -159,6 +159,23 @@ def artist_upload(username):
 @app.route('/artist/myarts/<username>')
 def artist_myarts(username):
     return jsonify([a for a in artworks if a['artist']==username])
+@app.route('/')
+def home():
+    return "backend is working"
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Backend is working 🚀"
+
+@app.route('/API/artworks')
+def artworks():
+    return jsonify([
+        {"title": "Art 1", "image": "img1.jpg"},
+        {"title": "Art 2", "image": "img2.jpg"}
+    ])
 
 # ===== Run server =====
 if __name__=='__main__':
