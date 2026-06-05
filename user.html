@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Panel - ArtSpace</title>
+<style>
+body{margin:0;font-family:'Arial';background:#111;color:white;}
+header{background:#ff4d6d;padding:15px;text-align:center;font-weight:bold;}
+nav{display:flex;}
+nav button{flex:1;padding:10px;background:#222;color:white;border:none;}
+.section{display:none;padding:20px;}.active{display:block;}
+.card{background:#222;padding:15px;margin:10px 0;border-radius:12px;}
+button.action{padding:8px;margin-top:10px;background:#ff4d6d;color:white;border:none;border-radius:5px;}
+</style>
+</head>
+<body>
+<header>ArtSpace User Panel</header>
+<nav>
+<button onclick="showSection('browse')">Browse</button>
+<button onclick="showSection('myLikes')">Likes</button>
+</nav>
+
+<div id="browse" class="section active">
+    <h3>All Artworks</h3>
+    <div id="artList"></div>
+</div>
+
+<div id="myLikes" class="section">
+    <h3>Liked Artworks</h3>
+    <div id="likedList"></div>
+</div>
+
+<script>
+const BASE_URL = "https://artspace-backend-1.onrender.com";
+const username = localStorage.getItem('userName');
+
+function showSection(id){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+async function loadData(){
+    try {
+        const res = await fetch(`${BASE_URL}/api/artworks`);
+        const artworks = await res.json();
+        const container = document.getElementById('artList');
+        container.innerHTML = '';
+        artworks.forEach(a => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<h4>${a.title}</h4><button class="action" onclick="likeArt('${a._id}')">Like</button>`;
+            container.appendChild(card);
+        });
+    } catch(err) { console.error(err); }
+}
+
+async function likeArt(artId){
+    await fetch(`${BASE_URL}/api/artworks/${artId}/like`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username: username })
+    });
+    loadData();
+}
+
+loadData();
+setInterval(loadData, 30000); // Optimized frequency
+</script>
+</body>
+</html>

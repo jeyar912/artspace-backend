@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - ArtSpace</title>
+<style>
+body{margin:0;font-family:'Arial';background:#1a1a1a;color:white;}
+header{background:#ff4d6d;padding:15px;text-align:center;font-size:1.5rem;font-weight:bold;box-shadow:0 4px 10px rgba(255,77,109,0.3);}
+nav{display:flex;flex-wrap:wrap;}
+nav button{flex:1;padding:12px;background:#222;color:white;border:none;cursor:pointer;transition:0.3s;margin:2px;}
+nav button:hover{background:#ff4d6d;}
+.section{display:none;padding:20px;}
+.active{display:block;}
+.card{background:#222;padding:15px;margin:15px 0;border-radius:12px;box-shadow:0 0 15px rgba(255,77,109,0.2);transition:0.3s;}
+.card:hover{transform:scale(1.02);}
+button.action{padding:6px 12px;margin:5px;cursor:pointer;border-radius:5px;border:none;background:#ff4d6d;color:white;}
+button.action:hover{background:#ff1e4d;}
+img.artwork,img.profile-pic{max-width:100px;border-radius:8px;margin-top:5px;}
+</style>
+</head>
+<body>
+
+<header>ArtSpace Admin Panel</header>
+
+<nav>
+<button onclick="showSection('dashboard')">Dashboard</button>
+<button onclick="showSection('artists')">Artists</button>
+<button onclick="showSection('users')">Users</button>
+<button onclick="showSection('artworks')">Artworks</button>
+<button onclick="showSection('logs')">Logs</button>
+</nav>
+
+<div id="dashboard" class="section active">
+<h3>Dashboard Overview</h3>
+<div class="card">Total Artists: <span id="totalArtists">0</span></div>
+<div class="card">Approved Artists: <span id="approvedCount">0</span></div>
+<div class="card">Total Users: <span id="totalUsers">0</span></div>
+<div class="card">Total Artworks: <span id="totalArts">0</span></div>
+<div class="card">Total Likes: <span id="totalLikes">0</span></div>
+<div class="card">Total Comments: <span id="totalComments">0</span></div>
+</div>
+
+<div id="artists" class="section">
+<h3>Artists Management</h3>
+<div id="artistList"></div>
+</div>
+
+<div id="users" class="section">
+<h3>Registered Users</h3>
+<div id="userList"></div>
+</div>
+
+<div id="artworks" class="section">
+<h3>All Artworks</h3>
+<div id="artList"></div>
+</div>
+
+<div id="logs" class="section">
+<h3>Activity Logs</h3>
+<div id="logList"></div>
+</div>
+
+<script>
+// Imerekebishwa kusoma kutoka Render Cloud Server yako live
+const BASE_URL = "https://artspace-backend-1.onrender.com";
+
+function showSection(id){
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+let artists = [], users = [], artworks = [], logs = [];
+
+// ======= LOAD SYSTEM CORE DATA FROM DB =======
+async function loadData(){
+    try {
+        const resArtists = await fetch(`${BASE_URL}/api/artists`);
+        artists = await resArtists.json();
+
+        const resUsers = await fetch(`${BASE_URL}/api/users`);
+        users = await resUsers.json();
+
+        const resArts = await fetch(`${BASE_URL}/api/artworks`);
+        artworks = await resArts.json();
+
+        const resLogs = await fetch(`${BASE_URL}/api/logs`);
+        logs = await resLogs.json();
+
+        renderArtists();
+        renderUsers();
+        renderArtworks();
+        renderLogs();
+        calculateDashboardMetrics();
+
+    } catch(err) {
+        console.error("Error loading backend data:", err);
+    }
+}
+
+// ======= RENDER SYSTEM METRICS =======
+function calculateDashboardMetrics(){
+    let totalLikes = 0, totalComments = 0;
+    artworks.forEach(a => {
+        totalLikes += (a.likes || 0);
+        totalComments += (a.comments || []).length;
+    });
+    
+    document.getElementById('totalArts').innerText = artworks.length;
+    document.getElementById('totalLikes').innerText = totalLikes;
+    document.getElementById('totalComments').innerText = totalComments;
+}
+
+// ======= RENDER LOGS =======
+function renderLogs(){
+    let html = '';
+    logs.slice().reverse().forEach(l=>{
+        html += `<div class="card">${l}</div>`;
+    });
+    document.getElementById('logList').innerHTML = html;
+}
+
+// ======= ARTISTS RENDER ENGINE =======
+function renderArtists(){
+    let html = '';
+    let approvedCount = 0;
+
+    artists.forEach((a)=>{
+        const profilePicSrc = a.profilePic ? a.profilePic : '';
+        if(!a.approved){
+            html += `
+            <div class="card">
+            <img src="${profilePicSrc}" class="profile-pic" alt="No Profile Pic"><br>
+            <b>${a.username}</b> (${a.email}) <br>
+            📞 ${a.phone||'N/A'} | 📍 ${a.address||'N/A'} <br>
+            🎨 Types: ${(a.artTypes||[]).join(', ')} <br>
+            💳 Payment: ${(a.paymentMethods||[]).join(', ')} <br>
+            <button class="action" onclick="approveArtist('${a._id}')">Approve</button>
+            </div>`;
+        } else {
+            approvedCount++;
+            html += `
+            <div class="card">
+            <img src="${profilePicSrc}" class="profile-pic" alt="No Profile Pic"><br>
+            <b>${a.username}</b> (${a.email}) ✔ <br>
+            📞 ${a.phone||'N/A'} | 📍 ${a.address||'N/A'} <br>
+            🎨 Types: ${(a.artTypes||[]).join(', ')} <br>
+            💳 Payment: ${(a.paymentMethods||[]).join(', ')}
+            </div>`;
+        }
+    });
+
+    document.getElementById('artistList').innerHTML = html;
+    document.getElementById('totalArtists').innerText = artists.length;
+    document.getElementById('approvedCount').innerText = approvedCount;
+}
+
+// ======= APPROVE ARTIST =======
+async function approveArtist(artistId){
+    try {
+        const res = await fetch(`${BASE_URL}/api/artist/approve/${artistId}`, { method: 'POST' });
+        const data = await res.json();
+        if(data.success){
+            alert(`✅ Artist approved successfully: ${data.username}`);
+            await loadData(); 
+        } else {
+            alert('Approval error: ' + data.message);
+        }
+    } catch(err) {
+        console.error("Error approving artist:", err);
+    }
+}
+
+// ======= REGISTERED SYSTEM USERS =======
+function renderUsers(){
+    let html = '';
+    users.forEach(u=>{
+        html += `<div class="card"><b>${u.username}</b> (${u.email})</div>`;
+    });
+    document.getElementById('userList').innerHTML = html;
+    document.getElementById('totalUsers').innerText = users.length;
+}
+
+// ======= ARTWORKS ENGINE =======
+function renderArtworks(){
+    let html = '';
+    artworks.forEach(a=>{
+        html += `
+        <div class="card">
+        <h4>${a.title} by ${a.artist}</h4>
+        <img src="${a.image}" class="artwork">
+        <p>${a.desc}</p>
+        <p>Type: ${a.type} | Tags: ${(a.tags||[]).join(', ')} | Price: $${a.price}</p>
+        <p>Likes: ${a.likes||0} | Comments: ${(a.comments||[]).length}</p>
+        </div>`;
+    });
+    document.getElementById('artList').innerHTML = html;
+}
+
+// ======= INITIAL RUN =======
+loadData();
+setInterval(loadData, 5000); // Live background refresh loop every 5 seconds
+</script>
+</body>
+</html>

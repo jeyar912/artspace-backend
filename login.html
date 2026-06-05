@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login/Register - ArtSpace</title>
+<style>
+body{margin:0;font-family:'Arial';background:#0f0f0f;color:white;}
+.container{max-width:400px;margin:50px auto;padding:20px;background:#222;border-radius:12px;}
+input,select,button{width:100%;margin:10px 0;padding:10px;border:none;border-radius:8px;}
+button{background:#ff4d6d;color:white;cursor:pointer;transition:0.3s;}
+button:hover{background:#ff1e4d;}
+h2{text-align:center;color:#ff4d6d;}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>ArtSpace</h2>
+
+<select id="roleSelect">
+<option value="user">User</option>
+<option value="artist">Artist</option>
+<option value="admin">Admin</option>
+</select>
+<input type="text" id="username" placeholder="Username">
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
+<button id="registerBtn">Register</button>
+<button id="loginBtn">Login</button>
+<p id="msg" style="color:#ff4d6d;"></p>
+</div>
+
+<script>
+// Imerekebishwa kusoma kutoka Render Cloud Server yako live
+const BASE_URL = "https://artspace-backend-1.onrender.com"; 
+const msg = document.getElementById('msg');
+
+// ===== REAL-TIME VALIDATION =====
+document.getElementById('username').oninput = function(){
+    const val = this.value.trim();
+    if(val.length < 3){
+        msg.innerText = "Username must be at least 3 characters";
+    } else {
+        msg.innerText = "";
+    }
+};
+
+document.getElementById('email').oninput = function(){
+    const val = this.value.trim();
+    const emailPattern = /^[^ ]+@[^ ]+\.[a-z]{2,3}$/;
+    if(!emailPattern.test(val)){
+        msg.innerText = "Enter a valid email address";
+    } else {
+        msg.innerText = "";
+    }
+};
+
+document.getElementById('password').oninput = function(){
+    const val = this.value.trim();
+    if(val.length < 5){
+        msg.innerText = "Password must be at least 5 characters";
+    } else {
+        msg.innerText = "";
+    }
+};
+
+// ===== REGISTER BACKEND INTEGRATION =====
+document.getElementById('registerBtn').onclick = function(){
+    const role = document.getElementById('roleSelect').value;
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    if(!username || !email || !password){ 
+        msg.innerText = 'Fill all fields!'; 
+        return;
+    }
+
+    fetch(`${BASE_URL}/api/register`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({role, username, email, password})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            msg.innerText = role === 'artist' ? 'Artist registered! Waiting approval' : 'User registered! Please login.';
+        } else {
+            msg.innerText = data.message;
+        }
+    })
+    .catch(err => {
+        console.error('Backend error:', err);
+        msg.innerText = "Could not connect to Python backend server.";
+    });
+};
+
+// ===== LOGIN BACKEND INTEGRATION =====
+document.getElementById('loginBtn').onclick = function(){
+    const role = document.getElementById('roleSelect').value;
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    if(!username || !password){
+        msg.innerText = "Enter username and password";
+        return;
+    }
+
+    fetch(`${BASE_URL}/api/login`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({role, username, password})
+    })
+    .then(res => {
+        if(!res.ok) {
+            return res.json().then(errData => { throw new Error(errData.message || "Login failed"); });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if(data.success){
+            localStorage.setItem('userRole', role);
+            if(role === 'user'){
+                localStorage.setItem('userName', data.username);
+                localStorage.setItem('userEmail', document.getElementById('email').value.trim());
+                window.location.href = 'user.html';
+            } 
+            else if(role === 'artist'){
+                localStorage.setItem('artistName', data.username);
+                window.location.href = 'artist.html';
+            } 
+            else if(role === 'admin'){
+                window.location.href = 'admin.html';
+            }
+        }
+    })
+    .catch(err => {
+        msg.innerText = err.message;
+    });
+};
+</script>
+</body>
+</html>

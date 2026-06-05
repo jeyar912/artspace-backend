@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArtSpace - Welcome</title>
+<style>
+body{margin:0;font-family:'Arial';background:#0f0f0f;color:white;}
+header{background:#ff4d6d;padding:15px;text-align:center;font-size:1.5rem;font-weight:bold;box-shadow:0 4px 10px rgba(255,77,109,0.3);}
+nav{display:flex;background:#222;padding:5px;}
+nav button{flex:1;padding:12px;background:#222;color:white;border:none;cursor:pointer;font-size:1rem;transition:0.3s;}
+nav button:hover, nav button.active-nav{background:#ff4d6d;}
+.section{display:none;padding:20px;}
+.active-section{display:block;}
+.container{max-width:400px;margin:40px auto;padding:20px;background:#222;border-radius:12px;box-shadow: 0 4px 15px rgba(255,77,109,0.2);}
+input,select,button.form-btn{width:100%;margin:10px 0;padding:10px;border:none;border-radius:8px;box-sizing: border-box;}
+button.form-btn{background:#ff4d6d;color:white;cursor:pointer;transition:0.3s;}
+button.form-btn:hover{background:#ff1e4d;}
+h2{text-align:center;color:#ff4d6d;margin-top:0;}
+.gallery-section{max-width:800px;margin:20px auto;padding:0 10px;}
+.art-scroll-view{display:flex;flex-direction:column;gap:20px;margin-top:20px;}
+.public-card{background:#222;padding:20px;border-radius:12px;border-left:4px solid #ff4d6d;}
+img.artwork-preview{max-width:100%;border-radius:8px;}
+</style>
+</head>
+<body>
+
+<header>ArtSpace</header>
+<nav>
+<button id="tabBrowse" class="active-nav" onclick="showPage('browse')">Browse Gallery</button>
+<button id="tabLogin" onclick="showPage('login')">Login / Register</button>
+</nav>
+
+<div id="browseSection" class="section active-section gallery-section">
+    <div id="publicGallery" class="art-scroll-view"><p style="text-align:center;">Loading artwork...</p></div>
+</div>
+
+<div id="loginSection" class="section">
+    <div class="container">
+        <h2>ArtSpace Portal</h2>
+        <select id="roleSelect"><option value="user">User</option><option value="artist">Artist</option><option value="admin">Admin</option></select>
+        <input type="text" id="username" placeholder="Username">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button class="form-btn" id="registerBtn">Register</button>
+        <button class="form-btn" id="loginBtn">Login</button>
+        <p id="msg" style="color:#ff4d6d; text-align:center;"></p>
+    </div>
+</div>
+
+<script>
+const BASE_URL = "https://artspace-backend-1.onrender.com"; 
+const msg = document.getElementById('msg');
+
+function showPage(target) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active-section'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
+    if(target === 'browse') {
+        document.getElementById('browseSection').classList.add('active-section');
+        document.getElementById('tabBrowse').classList.add('active-nav');
+    } else {
+        document.getElementById('loginSection').classList.add('active-section');
+        document.getElementById('tabLogin').classList.add('active-nav');
+    }
+}
+
+async function loadPublicGallery() {
+    try {
+        const res = await fetch(`${BASE_URL}/api/artworks`);
+        const artworks = await res.json();
+        const container = document.getElementById('publicGallery');
+        container.innerHTML = artworks.length === 0 ? '<p>No artwork yet.</p>' : '';
+        artworks.forEach(a => {
+            const card = document.createElement('div');
+            card.className = 'public-card';
+            card.innerHTML = `<h4>${a.title}</h4><img src="${a.image}" class="artwork-preview"><p>${a.desc}</p>`;
+            container.appendChild(card);
+        });
+    } catch(err) { console.error(err); }
+}
+
+document.getElementById('registerBtn').onclick = function(e){
+    e.preventDefault();
+    const role = document.getElementById('roleSelect').value;
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    fetch(`${BASE_URL}/api/register`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({role, username, email, password})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            msg.innerText = 'Success! Please login.';
+            document.getElementById('username').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+        } else { msg.innerText = data.message; }
+    });
+};
+
+loadPublicGallery();
+setInterval(loadPublicGallery, 30000); // Optimized
+</script>
+</body>
+</html>
